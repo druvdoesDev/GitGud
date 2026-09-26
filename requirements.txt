@@ -1,1 +1,7 @@
+<<<<<<< HEAD
 scipy
+=======
+fastapi
+uvicorn[standard]
+pydantic
+>>>>>>> 6d780e0 (Implement TRACR API event collection)
