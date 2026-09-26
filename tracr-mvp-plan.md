@@ -519,7 +519,7 @@ visually surfaced. This is the main deliverable for the demo.
 ---
 
 ### Sub-Task 6 — Documentation
-**Status:** [ ] pending
+**Status:** [x] done
 
 **Intent:** Fill in the three empty doc stubs and the README so any developer
 can understand, run, and extend TRACR without asking questions.
