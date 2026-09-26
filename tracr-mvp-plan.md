@@ -429,29 +429,22 @@ they land in `data/events.jsonl`. This is the first end-to-end path.
 ---
 
 ### Sub-Task 3 — Analysis read endpoints
-**Status:** [ ] pending
+**Status:** [x] done
 
-**Intent:** Implement the endpoints that serve BI layer output to the
-dashboard. At this stage, if `data/analysis.json` doesn't exist yet, return
-empty-but-valid responses.
+**Intent:** Wire the BI pipeline (app/twin/) into the API via a translation
+bridge. Compute the behavioral graph, flows, and summary on-demand from
+events.jsonl, cached for 5 seconds.
 
-**Expected Outcomes:**
-- `GET /graph` returns `BehaviorGraph` (empty if no analysis.json)
-- `GET /flows` returns list of `UserFlow` (empty if no analysis.json)
-- `GET /anomalies` returns list of `Anomaly` (empty if no analysis.json)
-- `GET /summary` returns `AnalysisSummary` (zero counts if no analysis.json)
-- All endpoints validated by Pydantic
-- FastAPI auto-docs at `/docs` show all endpoints
-
-**Todo List:**
-1. Add a helper in `routes.py` that reads and parses `data/analysis.json`
-   with a graceful fallback
-2. Implement `GET /graph`, `GET /flows`, `GET /anomalies`, `GET /summary`
-3. Manually verify at `http://localhost:8000/docs`
-
-**Relevant Context:**
-- Read `data/analysis.json` fresh on each request for MVP (no caching needed)
-- Return HTTP 200 with empty collections, not 404, when the file is absent
+**Implemented:**
+- `app/api/bi_bridge.py` — translates EventPayload-shaped dicts to BI Events,
+  runs build_journeys → build_graph → compute_probabilities, shapes results
+  into Pydantic response models, 5-second TTL cache
+- `app/api/schema.py` — EventPayload gains optional `action` and `feature`
+  fields (backward-compatible defaults from `event` and `page`)
+- `app/api/collector.py` — `read_all_events()` added (unlimited read for pipeline)
+- `app/api/routes.py` — GET /graph, GET /flows, GET /anomalies, GET /summary added
+- `requirements.txt` — merge conflict resolved; scipy added
+- 21/21 tests passing
 
 ---
 

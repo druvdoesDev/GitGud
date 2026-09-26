@@ -19,9 +19,9 @@ freely without breaking deserialization here.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -54,6 +54,29 @@ class EventPayload(BaseModel):
         default_factory=dict,
         description="Optional free-form key/value pairs attached to the event.",
     )
+    action: Optional[str] = Field(
+        default=None,
+        description=(
+            "BI layer action label. Defaults to the 'event' value when absent. "
+            "Older events stored without this field will use 'event' as the fallback."
+        ),
+    )
+    feature: Optional[str] = Field(
+        default=None,
+        description=(
+            "BI layer feature label. Defaults to the 'page' value when absent. "
+            "Older events stored without this field will use 'page' as the fallback."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _fill_action_feature_defaults(self) -> "EventPayload":
+        """Populate action/feature from event/page when not explicitly supplied."""
+        if self.action is None:
+            self.action = self.event
+        if self.feature is None:
+            self.feature = self.page
+        return self
 
 
 # ---------------------------------------------------------------------------
