@@ -449,7 +449,7 @@ events.jsonl, cached for 5 seconds.
 ---
 
 ### Sub-Task 4 — Sample application
-**Status:** [ ] pending
+**Status:** [x] done
 
 **Intent:** Build the minimal e-commerce SPA and the TRACR JS snippet so that
 serving the sample app through a local HTTP server immediately starts
