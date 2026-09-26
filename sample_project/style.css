@@ -1,0 +1,179 @@
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #1f2328;
+  background: #f7f8fa;
+  min-height: 100vh;
+}
+
+/* ── Navigation bar ───────────────────────────────────────────────────────── */
+.nav {
+  background: #1f2328;
+  color: #fff;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  height: 52px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nav-brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-decoration: none;
+}
+
+.nav-brand span {
+  color: #3b82d4;
+}
+
+.nav-links { display: flex; gap: 1rem; }
+
+.nav-links a {
+  color: #cdd5df;
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 0.25rem 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.nav-links a:hover,
+.nav-links a.active { color: #fff; border-bottom-color: #3b82d4; }
+
+/* ── Page wrapper ─────────────────────────────────────────────────────────── */
+.page { display: none; }
+.page.active { display: block; }
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.card h2 { font-size: 1.3rem; margin-bottom: 0.5rem; }
+.card h3 { font-size: 1rem; margin-bottom: 0.4rem; color: #57606a; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.15s;
+  line-height: 1.5;
+}
+.btn:hover { opacity: 0.85; }
+
+.btn-primary   { background: #1f2328; color: #fff; }
+.btn-secondary { background: #e5e7eb; color: #1f2328; }
+.btn-success   { background: #2da44e; color: #fff; }
+.btn-danger    { background: #cf222e; color: #fff; }
+.btn-outline   { background: transparent; color: #1f2328; border: 1px solid #d0d7de; }
+
+.btn + .btn { margin-left: 0.5rem; }
+
+/* ── Product card ─────────────────────────────────────────────────────────── */
+.product-img {
+  width: 100%;
+  height: 180px;
+  background: #e5e7eb;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.price { font-size: 1.4rem; font-weight: 700; color: #1f2328; margin: 0.5rem 0; }
+.price-note { font-size: 0.8rem; color: #57606a; }
+
+/* ── Cart ─────────────────────────────────────────────────────────────────── */
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+.cart-item:last-child { border-bottom: none; }
+.cart-total { font-weight: 700; font-size: 1.1rem; margin-top: 0.75rem; text-align: right; }
+
+.remove-link {
+  color: #cf222e;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* ── Checkout form ────────────────────────────────────────────────────────── */
+.form-field { margin-bottom: 1rem; }
+.form-field label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; }
+.form-field input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-note { font-size: 0.8rem; color: #57606a; margin-top: 0.25rem; }
+
+/* ── Confirmation ─────────────────────────────────────────────────────────── */
+.confirmation-icon {
+  font-size: 3.5rem;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+.confirmation-note { color: #57606a; font-size: 0.9rem; }
+#order-id-display { font-family: monospace; font-size: 0.85rem; color: #57606a; }
+
+/* ── Demo controls ────────────────────────────────────────────────────────── */
+.demo-card {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.demo-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; color: #92400e; }
+.demo-card p  { font-size: 0.82rem; color: #78350f; margin-bottom: 0.75rem; }
+.demo-card .btn { margin-bottom: 0.4rem; }
+
+.demo-status {
+  font-size: 0.82rem;
+  color: #57606a;
+  margin-top: 0.5rem;
+  min-height: 1.2em;
+}
+
+/* ── Utility ──────────────────────────────────────────────────────────────── */
+.muted  { color: #57606a; font-size: 0.9rem; }
+.spacer { margin-top: 1rem; }
+.text-center { text-align: center; }

@@ -51,6 +51,20 @@ def append_event(event: EventPayload) -> None:
         fh.write(json.dumps(record) + "\n")
 
 
+def _parse_jsonl(text: str) -> list[dict[str, Any]]:
+    """Parse JSONL text into a list of dicts, silently skipping malformed lines."""
+    events: list[dict[str, Any]] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            events.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return events
+
+
 def read_recent_events(limit: int = 100) -> list[dict[str, Any]]:
     """
     Return the most recent *limit* events from data/events.jsonl.
@@ -61,18 +75,19 @@ def read_recent_events(limit: int = 100) -> list[dict[str, Any]]:
     """
     if not EVENTS_FILE.exists():
         return []
-
-    lines = EVENTS_FILE.read_text(encoding="utf-8").splitlines()
-
-    events: list[dict[str, Any]] = []
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            events.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue  # skip malformed lines without crashing
-
+    events = _parse_jsonl(EVENTS_FILE.read_text(encoding="utf-8"))
     # Return the tail — most recent events last in the file
     return events[-limit:]
+
+
+def read_all_events() -> list[dict[str, Any]]:
+    """
+    Return every event from data/events.jsonl with no limit.
+
+    Used by the BI bridge to feed the full event history into the
+    behavioral analysis pipeline.  Returns an empty list when the file
+    does not exist or is empty.
+    """
+    if not EVENTS_FILE.exists():
+        return []
+    return _parse_jsonl(EVENTS_FILE.read_text(encoding="utf-8"))
