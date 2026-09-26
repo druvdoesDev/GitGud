@@ -11,13 +11,17 @@ Sub-Task 3:
   GET /flows     — top user journeys ranked by frequency
   GET /anomalies — detected behavioral anomalies (empty until BI analysis module is implemented)
   GET /summary   — session/event counts and last-updated timestamp
+
+Sub-Task 4 (What-If):
+  GET  /whatif/baseline  — return baseline TransitionMatrix probabilities
+  POST /whatif/simulate  — apply modifications, simulate, return WhatIfResult
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.api import bi_bridge, collector
-from app.api.schema import EventPayload
+from app.api import bi_bridge, collector, whatif
+from app.api.schema import EventPayload, WhatIfRequest
 
 router = APIRouter()
 
@@ -170,3 +174,45 @@ def get_summary() -> JSONResponse:
             "last_updated": s.last_updated.isoformat() if s.last_updated else None,
         }
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /whatif/baseline
+# ---------------------------------------------------------------------------
+
+
+@router.get("/whatif/baseline")
+def get_whatif_baseline() -> JSONResponse:
+    """
+    Return the baseline TransitionMatrix probabilities derived from observed events.
+
+    The frontend uses this to pre-populate the WhatIfPanel edge sliders before
+    the developer makes any modifications.  Returns an empty dict when no events
+    have been collected yet.
+    """
+    try:
+        probs = whatif.get_baseline_probabilities()
+        return JSONResponse(content={"probabilities": probs})
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+# ---------------------------------------------------------------------------
+# POST /whatif/simulate
+# ---------------------------------------------------------------------------
+
+
+@router.post("/whatif/simulate")
+def post_whatif_simulate(request: WhatIfRequest) -> JSONResponse:
+    """
+    Apply edge-probability modifications to a copy of the baseline model,
+    run baseline and what-if simulations, and return a WhatIfResult.
+
+    Request body must include at least one WhatIfModification.
+    FastAPI/Pydantic handles validation and returns 422 on malformed input.
+    """
+    try:
+        result = whatif.run_whatif(request)
+        return JSONResponse(content=result.model_dump(by_alias=True))
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

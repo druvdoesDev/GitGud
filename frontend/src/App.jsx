@@ -4,27 +4,31 @@ import {
   fetchHealth,
   fetchGraph,
   fetchFlows,
-  fetchAnomalies,
   fetchSummary,
   fetchEvents,
+  fetchWhatifBaseline,
 } from "./api/client.js";
 
-import StatusBar    from "./components/StatusBar.jsx";
-import SummaryBar   from "./components/SummaryBar.jsx";
-import GraphView    from "./components/GraphView.jsx";
-import FlowTable    from "./components/FlowTable.jsx";
-import AnomalyPanel from "./components/AnomalyPanel.jsx";
-import EventFeed    from "./components/EventFeed.jsx";
+import StatusBar      from "./components/StatusBar.jsx";
+import SummaryBar     from "./components/SummaryBar.jsx";
+import GraphView      from "./components/GraphView.jsx";
+import FlowTable      from "./components/FlowTable.jsx";
+import WhatIfPanel    from "./components/WhatIfPanel.jsx";
+import InstabilityView from "./components/InstabilityView.jsx";
+import EventFeed      from "./components/EventFeed.jsx";
 
 const REFRESH_INTERVAL = 5000; // ms
 
 export default function App() {
   // null = not yet loaded; object = loaded data
-  const [graph,     setGraph]     = useState(null);
-  const [flows,     setFlows]     = useState(null);
-  const [anomalies, setAnomalies] = useState(null);
-  const [summary,   setSummary]   = useState(null);
-  const [events,    setEvents]    = useState(null);
+  const [graph,    setGraph]    = useState(null);
+  const [flows,    setFlows]    = useState(null);
+  const [summary,  setSummary]  = useState(null);
+  const [events,   setEvents]   = useState(null);
+  const [baseline, setBaseline] = useState(null);
+
+  // What-if simulation result (set by WhatIfPanel callback)
+  const [whatifDeviations, setWhatifDeviations] = useState(null);
 
   // "loading" | "ok" | "error"
   const [apiStatus, setApiStatus] = useState("loading");
@@ -35,20 +39,20 @@ export default function App() {
       // Health check first — cheap, fast, surfaces API-down state clearly
       await fetchHealth();
 
-      const [graphData, flowsData, anomaliesData, summaryData, eventsData] =
+      const [graphData, flowsData, summaryData, eventsData, baselineData] =
         await Promise.all([
           fetchGraph(),
           fetchFlows(),
-          fetchAnomalies(),
           fetchSummary(),
           fetchEvents(),
+          fetchWhatifBaseline(),
         ]);
 
       setGraph(graphData);
       setFlows(flowsData.flows);
-      setAnomalies(anomaliesData.anomalies);
       setSummary(summaryData);
       setEvents(eventsData.events);
+      setBaseline(baselineData);
       setApiStatus("ok");
       setApiError(null);
     } catch (err) {
@@ -119,16 +123,29 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right column middle — Anomalies */}
+        {/* Right column middle — What-If */}
         <div className="panel">
           <div className="panel-header">
-            <span className="panel-title">Anomalies</span>
-            {anomalies && anomalies.length > 0 && (
-              <span className="panel-count">{anomalies.length} detected</span>
+            <span className="panel-title">What-If</span>
+            {whatifDeviations && whatifDeviations.length > 0 && (
+              <span className="panel-count">{whatifDeviations.length} deviations</span>
             )}
           </div>
           <div className="panel-body">
-            <AnomalyPanel anomalies={anomalies} />
+            <WhatIfPanel
+              baseline={baseline}
+              onResult={(r) => setWhatifDeviations(r.deviations)}
+            />
+          </div>
+        </div>
+
+        {/* Right column — Instability view */}
+        <div className="panel">
+          <div className="panel-header">
+            <span className="panel-title">Behavioral Instability</span>
+          </div>
+          <div className="panel-body" style={{ padding: 0 }}>
+            <InstabilityView deviations={whatifDeviations} width={378} height={260} />
           </div>
         </div>
 

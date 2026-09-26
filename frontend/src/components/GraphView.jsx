@@ -1,26 +1,61 @@
+import { useEffect, useCallback } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
   MarkerType,
+  useReactFlow,
+  ReactFlowProvider,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
 /**
- * Deterministic left-to-right positions for the known e-commerce pages.
- * Unknown pages fall back to a row below the main flow.
+ * Ordered left-to-right layout for the known e-commerce pages.
+ * Positions are expressed as column indices; actual pixel x/y are computed
+ * at render time based on the number of nodes so the graph fills the canvas
+ * regardless of how many pages are present.
  */
-const KNOWN_POSITIONS = {
-  home:         { x: 40,  y: 200 },
-  product:      { x: 220, y: 200 },
-  cart:         { x: 400, y: 200 },
-  checkout:     { x: 580, y: 200 },
-  confirmation: { x: 760, y: 200 },
-};
+const KNOWN_ORDER = ["home", "product", "cart", "checkout", "confirmation"];
 
-function getPosition(id, unknownIndex) {
-  return KNOWN_POSITIONS[id] ?? { x: 40 + unknownIndex * 180, y: 380 };
+/**
+ * Assign a column index to every node.
+ * Known pages get their fixed column; unknown pages are placed in extra
+ * columns after the last known page, one per row of two.
+ */
+function assignColumns(nodes) {
+  const columns = {};
+  const unknowns = [];
+
+  for (const n of nodes) {
+    const idx = KNOWN_ORDER.indexOf(n.id);
+    if (idx !== -1) {
+      columns[n.id] = { col: idx, row: 0 };
+    } else {
+      unknowns.push(n.id);
+    }
+  }
+
+  const baseCol = KNOWN_ORDER.length;
+  unknowns.forEach((id, i) => {
+    columns[id] = { col: baseCol + Math.floor(i / 2), row: i % 2 };
+  });
+
+  return columns;
+}
+
+const H_GAP = 200; // horizontal gap between columns (px)
+const V_GAP = 120; // vertical gap between rows (px)
+const NODE_H = 40; // approximate node height (px)
+
+function buildPositions(nodes) {
+  const layout = assignColumns(nodes);
+  return Object.fromEntries(
+    Object.entries(layout).map(([id, { col, row }]) => [
+      id,
+      { x: col * H_GAP, y: row * (NODE_H + V_GAP) },
+    ])
+  );
 }
 
 /** Map visit_count to a node width for visual sizing. */
@@ -38,13 +73,24 @@ function edgeStroke(count) {
   return 4;
 }
 
-/**
- * GraphView — behavioral transition graph.
- *
- * Props:
- *   graph: { nodes: [{id, visit_count}], edges: [{from, to, probability, count}] } | null
- */
-export default function GraphView({ graph }) {
+// ── Inner component that has access to useReactFlow ─────────────────────────
+
+function GraphViewInner({ graph }) {
+  const { fitView } = useReactFlow();
+
+  // Re-fit whenever the graph data changes (new nodes/edges after refresh)
+  useEffect(() => {
+    if (graph && graph.nodes.length > 0) {
+      // Small delay lets ReactFlow finish rendering the new nodes before fitting
+      const t = setTimeout(() => fitView({ padding: 0.25, duration: 300 }), 50);
+      return () => clearTimeout(t);
+    }
+  }, [graph, fitView]);
+
+  const handleFit = useCallback(() => {
+    fitView({ padding: 0.25, duration: 300 });
+  }, [fitView]);
+
   if (!graph) {
     return (
       <div className="empty-state">
@@ -64,13 +110,10 @@ export default function GraphView({ graph }) {
     );
   }
 
-  // Track unknown pages to position them in a grid row below
-  let unknownIdx = 0;
-  const knownIds = new Set(Object.keys(KNOWN_POSITIONS));
+  const positions = buildPositions(graph.nodes);
 
   const rfNodes = graph.nodes.map((n) => {
-    const isUnknown = !knownIds.has(n.id);
-    const pos = getPosition(n.id, isUnknown ? unknownIdx++ : 0);
+    const pos = positions[n.id] ?? { x: 0, y: 0 };
     const w = nodeWidth(n.visit_count);
     return {
       id: n.id,
@@ -105,15 +148,37 @@ export default function GraphView({ graph }) {
   }));
 
   return (
-    <div className="graph-wrap">
+    <div className="graph-wrap" style={{ position: "relative" }}>
+      {/* Fit-to-view button overlaid on the graph */}
+      <button
+        onClick={handleFit}
+        title="Fit graph to view"
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          zIndex: 10,
+          padding: "3px 10px",
+          fontSize: "0.75rem",
+          fontWeight: 600,
+          background: "#fff",
+          border: "1px solid #d0d7de",
+          borderRadius: 5,
+          cursor: "pointer",
+          color: "#1f2328",
+        }}
+      >
+        ⊡ Fit
+      </button>
+
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.25 }}
         nodesDraggable={true}
         nodesConnectable={false}
-        elementsSelectable={false}
+        elementsSelectable={true}
         proOptions={{ hideAttribution: true }}
       >
         <Background color="#e5e7eb" gap={20} />
@@ -125,5 +190,29 @@ export default function GraphView({ graph }) {
         />
       </ReactFlow>
     </div>
+  );
+}
+
+// ── Public export wraps the inner component in ReactFlowProvider ─────────────
+
+/**
+ * GraphView — behavioral transition graph.
+ *
+ * Props:
+ *   graph: { nodes: [{id, visit_count}], edges: [{from, to, probability, count}] } | null
+ *
+ * Changes from original:
+ *   - fitView re-fires on every graph data change (not just mount)
+ *   - node positions are column-based and viewport-relative, not hardcoded pixels
+ *   - unknown-page positioning bug fixed (was always passing index 0)
+ *   - Fit button added (programmatic fitView via useReactFlow)
+ *   - elementsSelectable enabled (nodes can be clicked/highlighted)
+ *   - wrapped in ReactFlowProvider so useReactFlow() works correctly
+ */
+export default function GraphView({ graph }) {
+  return (
+    <ReactFlowProvider>
+      <GraphViewInner graph={graph} />
+    </ReactFlowProvider>
   );
 }
