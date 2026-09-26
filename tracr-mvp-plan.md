@@ -488,7 +488,7 @@ generating real events.
 ---
 
 ### Sub-Task 5 — React dashboard
-**Status:** [ ] pending
+**Status:** [x] done
 
 **Intent:** Build the developer dashboard so all the behavioral data is
 visually surfaced. This is the main deliverable for the demo.
