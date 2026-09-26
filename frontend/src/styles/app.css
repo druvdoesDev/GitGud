@@ -1,0 +1,288 @@
+/* ── Reset ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1f2328;
+  background: #f6f8fa;
+  min-height: 100vh;
+}
+
+/* ── Top bar ───────────────────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.25rem;
+  height: 48px;
+  background: #1f2328;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.topbar-brand {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.topbar-brand span { color: #3b82d4; }
+
+.topbar-spacer { flex: 1; }
+
+.btn-refresh {
+  padding: 0.3rem 0.85rem;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 5px;
+  background: transparent;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-refresh:hover { background: rgba(255,255,255,0.1); }
+.btn-refresh:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Status indicator ──────────────────────────────────────────────────────── */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.ok      { background: #2da44e; }
+.status-dot.error   { background: #cf222e; }
+.status-dot.loading { background: #c4a700; }
+
+/* ── Summary bar ───────────────────────────────────────────────────────────── */
+.summary-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #d0d7de;
+  background: #fff;
+}
+
+.summary-stat {
+  flex: 1;
+  padding: 0.75rem 1.25rem;
+  border-right: 1px solid #d0d7de;
+}
+.summary-stat:last-child { border-right: none; }
+
+.summary-stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #57606a;
+  margin-bottom: 0.15rem;
+}
+
+.summary-stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1f2328;
+}
+
+.summary-stat-value.muted { color: #57606a; font-size: 1rem; font-weight: 400; }
+
+/* ── Main layout ───────────────────────────────────────────────────────────── */
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  grid-template-rows: auto auto auto;
+  gap: 1px;
+  background: #d0d7de;
+  min-height: calc(100vh - 48px - 57px);
+}
+
+.panel {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+}
+
+.panel-graph {
+  grid-row: 1 / 4;
+  min-height: 520px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.panel-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #57606a;
+}
+
+.panel-count {
+  font-size: 0.75rem;
+  color: #57606a;
+  margin-left: auto;
+}
+
+.panel-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0.75rem 1rem;
+}
+
+/* ── Empty / error states ──────────────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 120px;
+  color: #57606a;
+  font-size: 0.85rem;
+  text-align: center;
+  gap: 0.4rem;
+}
+
+.empty-state-icon { font-size: 1.5rem; }
+
+.error-banner {
+  background: #fff8c5;
+  border: 1px solid #d4a72c;
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.82rem;
+  color: #7d4e00;
+  margin: 0.5rem 1rem;
+}
+
+/* ── Graph ─────────────────────────────────────────────────────────────────── */
+.graph-wrap {
+  width: 100%;
+  height: 100%;
+  min-height: 460px;
+}
+
+/* ReactFlow node inner label */
+.rf-node-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.rf-node-name { font-weight: 700; font-size: 0.8rem; }
+.rf-node-count { font-size: 0.68rem; color: #57606a; }
+
+/* ── Flow table ────────────────────────────────────────────────────────────── */
+.flow-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.flow-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #57606a;
+  padding: 0 0.5rem 0.4rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.flow-table td {
+  padding: 0.45rem 0.5rem;
+  vertical-align: top;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.flow-table tr:last-child td { border-bottom: none; }
+
+.flow-path {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  align-items: center;
+}
+
+.flow-page {
+  background: #f0f6ff;
+  border: 1px solid #b6d4fb;
+  border-radius: 3px;
+  padding: 0 0.35rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.flow-arrow { color: #57606a; font-size: 0.7rem; }
+
+.flow-primary .flow-page { background: #dafbe1; border-color: #4ac26b; }
+
+.flow-share { color: #57606a; white-space: nowrap; }
+
+/* ── Anomaly panel ─────────────────────────────────────────────────────────── */
+.anomaly-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+
+.anomaly-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.82rem;
+}
+
+.anomaly-badge {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  margin-top: 1px;
+}
+
+.anomaly-badge.low    { background: #fff8c5; color: #7d4e00; }
+.anomaly-badge.medium { background: #ffe7c0; color: #7a3b00; }
+.anomaly-badge.high   { background: #ffd8d8; color: #8b0000; }
+
+/* ── Event feed ────────────────────────────────────────────────────────────── */
+.event-feed { display: flex; flex-direction: column; gap: 0; }
+
+.event-row {
+  display: grid;
+  grid-template-columns: 60px 70px 90px 1fr;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.78rem;
+}
+
+.event-row:last-child { border-bottom: none; }
+
+.event-ts   { color: #57606a; font-variant-numeric: tabular-nums; }
+.event-sid  { color: #57606a; font-family: monospace; font-size: 0.72rem; }
+.event-page { font-weight: 600; }
+.event-name { color: #3b82d4; }
