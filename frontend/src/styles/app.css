@@ -102,25 +102,57 @@ body {
 .summary-stat-value.muted { color: #57606a; font-size: 1rem; font-weight: 400; }
 
 /* ── Main layout ───────────────────────────────────────────────────────────── */
+
+/*
+ * Layout: two columns.
+ *   Left  — behavioral graph, fills the full viewport height below the chrome.
+ *   Right — scrollable sidebar with developer controls stacked top-to-bottom.
+ *
+ * Chrome height reference:
+ *   topbar  48px
+ *   summary ~57px  (2×padding + label + value)
+ *   total   ~105px  → use 108px as safe value
+ */
+--chrome-h: 108px;
+
 .dashboard {
   display: grid;
-  grid-template-columns: 1fr 380px;
-  grid-template-rows: auto auto auto;
+  grid-template-columns: 1fr 360px;
+  grid-template-rows: 1fr;          /* single row — sidebar scrolls internally */
   gap: 1px;
   background: #d0d7de;
-  min-height: calc(100vh - 48px - 57px);
+  height: calc(100vh - var(--chrome-h));
+  min-height: 600px;                /* floor so tiny windows stay usable */
+}
+
+/* Left column — spans the only row */
+.panel-graph {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 500px;
+  overflow: hidden;
+}
+
+/* Right column — single scrollable sidebar */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: #d0d7de;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;                     /* prevents grid blowout */
 }
 
 .panel {
   background: #fff;
   display: flex;
   flex-direction: column;
-  min-height: 260px;
-}
-
-.panel-graph {
-  grid-row: 1 / 4;
-  min-height: 520px;
+  flex-shrink: 0;                   /* don't collapse inside the scrollable sidebar */
+  min-width: 0;
 }
 
 .panel-header {
@@ -181,7 +213,7 @@ body {
 .graph-wrap {
   width: 100%;
   height: 100%;
-  min-height: 460px;
+  min-height: 0;                    /* let the flex parent (panel-graph) control height */
 }
 
 /* ReactFlow node inner label */
@@ -197,6 +229,13 @@ body {
 .rf-node-count { font-size: 0.68rem; color: #57606a; }
 
 /* ── Flow table ────────────────────────────────────────────────────────────── */
+
+/* Constrain the FlowTable panel body so it never pushes other panels off screen */
+.panel-flows .panel-body {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
 .flow-table {
   width: 100%;
   border-collapse: collapse;
@@ -286,3 +325,233 @@ body {
 .event-sid  { color: #57606a; font-family: monospace; font-size: 0.72rem; }
 .event-page { font-weight: 600; }
 .event-name { color: #3b82d4; }
+
+/* ── What-If Panel ─────────────────────────────────────────────────────────── */
+.whatif-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.whatif-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.whatif-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #57606a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.whatif-prob-display {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1f2328;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.whatif-prob-delta {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.whatif-delta-pos  { color: #2da44e; }
+.whatif-delta-neg  { color: #cf222e; }
+.whatif-delta-zero { color: #57606a; }
+
+.whatif-select {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #d0d7de;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  background: #fff;
+  color: #1f2328;
+}
+
+.whatif-slider {
+  width: 100%;
+  accent-color: #3b82d4;
+  cursor: pointer;
+}
+
+.whatif-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: #57606a;
+  position: relative;
+}
+
+.whatif-baseline-tick {
+  position: absolute;
+  transform: translateX(-50%);
+  color: #7c5cd8;
+  font-weight: 600;
+}
+
+.whatif-run-btn {
+  padding: 0.4rem 1rem;
+  background: #3b82d4;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.15s;
+}
+.whatif-run-btn:hover:not(:disabled) { background: #2563c0; }
+.whatif-run-btn:disabled { opacity: 0.45; cursor: default; }
+
+.whatif-error {
+  background: #ffd8d8;
+  color: #8b0000;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+/* ── What-If Results ───────────────────────────────────────────────────────── */
+.whatif-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.6rem;
+}
+
+.whatif-stats-row {
+  display: flex;
+  gap: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.whatif-stat {
+  flex: 1;
+  padding: 0.45rem 0.6rem;
+  border-right: 1px solid #e5e7eb;
+  text-align: center;
+}
+.whatif-stat:last-child { border-right: none; }
+
+.whatif-stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #57606a;
+  margin-bottom: 0.15rem;
+}
+
+.whatif-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2328;
+}
+
+.whatif-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #57606a;
+}
+
+.whatif-dev-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.whatif-dev-table th {
+  text-align: left;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #57606a;
+  padding: 0 0.4rem 0.3rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.whatif-dev-table td {
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid #f0f0f0;
+  white-space: nowrap;
+}
+
+.whatif-dev-table tr:last-child td { border-bottom: none; }
+
+.whatif-dev-edge { font-weight: 600; white-space: nowrap; }
+
+.wi-sev-high   { background: #fff5f5; }
+.wi-sev-medium { background: #fffaf0; }
+
+.whatif-chi-note {
+  font-size: 0.72rem;
+  color: #57606a;
+  font-style: italic;
+  line-height: 1.4;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 0.4rem;
+}
+
+/* ── Instability View ──────────────────────────────────────────────────────── */
+
+/*
+ * Square container: aspect-ratio ensures the canvas area is always square
+ * regardless of sidebar width.  The canvas element itself is sized via props
+ * so we just need to make sure the wrapper never overflows horizontally.
+ */
+.instability-wrap {
+  position: relative;
+  background: #fafbfc;
+  overflow: hidden;
+  transition: border 0.3s;
+  /* Fill the available panel width, stay square */
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 340px;                /* cap on very wide viewports */
+}
+
+.instability-wrap.instability-escaped {
+  border: 2px solid #cf222e;
+  box-shadow: 0 0 0 1px rgba(207,34,46,0.25);
+}
+
+.instability-canvas {
+  display: block;
+  width: 100% !important;           /* scale canvas display size to container */
+  height: 100% !important;
+}
+
+/* ── Responsive adjustments ────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    height: auto;
+  }
+
+  .panel-graph {
+    height: 420px;
+    min-height: 420px;
+  }
+
+  .sidebar {
+    height: auto;
+    overflow-y: visible;
+    max-height: none;
+  }
+}

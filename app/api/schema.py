@@ -199,3 +199,189 @@ class AnalysisResult(BaseModel):
     top_flows: list[UserFlow] = Field(default_factory=list)
     anomalies: list[Anomaly] = Field(default_factory=list)
     summary: AnalysisSummary = Field(default_factory=AnalysisSummary)
+
+
+# ---------------------------------------------------------------------------
+# What-If: inbound request models
+# ---------------------------------------------------------------------------
+
+
+class WhatIfModification(BaseModel):
+    """A single edge-probability override for a what-if scenario."""
+
+    model_config = {"extra": "forbid"}
+
+    from_node: str = Field(
+        ...,
+        alias="from",
+        description="Source page name for this transition.",
+    )
+    to_node: str = Field(
+        ...,
+        alias="to",
+        description="Destination page name for this transition.",
+    )
+    probability: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Desired probability for this transition in the what-if model. "
+            "Remaining outgoing probabilities from the same source node will be "
+            "re-normalised proportionally."
+        ),
+    )
+
+    model_config = {"extra": "forbid", "populate_by_name": True}
+
+
+class WhatIfRequest(BaseModel):
+    """Request body for POST /whatif/simulate."""
+
+    model_config = {"extra": "ignore"}
+
+    modifications: list[WhatIfModification] = Field(
+        ...,
+        min_length=1,
+        description="One or more edge-probability overrides to apply to the baseline model.",
+    )
+    start_node: str | None = Field(
+        default=None,
+        description=(
+            "Node to begin simulated journeys from. "
+            "Defaults to the node with the highest visit count when omitted."
+        ),
+    )
+    n_journeys: int = Field(
+        default=200,
+        ge=1,
+        le=2000,
+        description="Number of synthetic journeys to simulate for each model (baseline and what-if).",
+    )
+    rng_seed: int = Field(
+        default=42,
+        description=(
+            "Random seed for both simulations. Fixed seed ensures the demo is reproducible: "
+            "same request body → same result."
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# What-If: outbound response models
+# ---------------------------------------------------------------------------
+
+
+class EdgeDeviation(BaseModel):
+    """Measured deviation for one directed edge between the baseline and what-if models."""
+
+    model_config = {"extra": "ignore"}
+
+    from_node: str = Field(..., alias="from", description="Source page name.")
+    to_node: str = Field(..., alias="to", description="Destination page name.")
+    baseline_probability: float = Field(
+        ..., description="P(to|from) in the observed baseline TransitionMatrix."
+    )
+    whatif_probability: float = Field(
+        ..., description="P(to|from) in the modified what-if TransitionMatrix."
+    )
+    absolute_delta: float = Field(
+        ...,
+        description="whatif_probability − baseline_probability (negative = decrease).",
+    )
+    relative_delta: float = Field(
+        ...,
+        description=(
+            "absolute_delta / baseline_probability. "
+            "0.0 when baseline_probability is 0."
+        ),
+    )
+    simulated_frequency_baseline: float = Field(
+        ...,
+        description="Fraction of simulated baseline journeys that contained this edge.",
+    )
+    simulated_frequency_whatif: float = Field(
+        ...,
+        description="Fraction of simulated what-if journeys that contained this edge.",
+    )
+    magnitude: float = Field(
+        ...,
+        ge=0.0,
+        description="abs(absolute_delta) — primary ordering and bubble-sizing signal.",
+    )
+    severity: Literal["low", "medium", "high"] = Field(
+        ...,
+        description="low: magnitude < 0.10; medium: 0.10–0.30; high: > 0.30.",
+    )
+
+    model_config = {"extra": "ignore", "populate_by_name": True}
+
+
+class JourneyStats(BaseModel):
+    """Summary statistics derived from a set of simulated journeys."""
+
+    model_config = {"extra": "ignore"}
+
+    completion_rate: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Fraction of journeys that reached the terminal node.",
+    )
+    mean_length: float = Field(
+        ..., description="Mean number of nodes per simulated journey."
+    )
+
+
+class DistributionComparison(BaseModel):
+    """Informational chi-square comparison between baseline and what-if simulations."""
+
+    model_config = {"extra": "ignore"}
+
+    chi_square_statistic: float
+    p_value: float
+    note: str = Field(
+        ...,
+        description="Plain-English interpretation; always labelled as informational only.",
+    )
+
+
+class WhatIfResult(BaseModel):
+    """Response body for POST /whatif/simulate."""
+
+    model_config = {"extra": "ignore"}
+
+    baseline_probabilities: dict[str, dict[str, float]] = Field(
+        ...,
+        description="Per-edge probabilities from the observed baseline TransitionMatrix.",
+    )
+    whatif_probabilities: dict[str, dict[str, float]] = Field(
+        ...,
+        description="Per-edge probabilities from the modified what-if TransitionMatrix.",
+    )
+    deviations: list[EdgeDeviation] = Field(
+        default_factory=list,
+        description=(
+            "Edges where the probability changed, sorted by magnitude descending. "
+            "Only edges with magnitude > 0 are included."
+        ),
+    )
+    distribution_comparison: DistributionComparison | None = Field(
+        default=None,
+        description="Chi-square comparison between simulated baseline and what-if journeys.",
+    )
+    journey_stats_baseline: JourneyStats | None = Field(
+        default=None,
+        description="Completion rate and mean length for simulated baseline journeys.",
+    )
+    journey_stats_whatif: JourneyStats | None = Field(
+        default=None,
+        description="Completion rate and mean length for simulated what-if journeys.",
+    )
+    completion_delta: float | None = Field(
+        default=None,
+        description=(
+            "journey_stats_whatif.completion_rate − journey_stats_baseline.completion_rate. "
+            "Negative means what-if model completes fewer journeys."
+        ),
+    )

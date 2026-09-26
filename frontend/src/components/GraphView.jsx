@@ -1,50 +1,208 @@
+import { useEffect, useMemo, useCallback } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   MarkerType,
+  Handle,
+  Position,
+  ReactFlowProvider,
+  useReactFlow,
 } from "@xyflow/react";
+
 import "@xyflow/react/dist/style.css";
 
-/**
- * Deterministic left-to-right positions for the known e-commerce pages.
- * Unknown pages fall back to a row below the main flow.
- */
-const KNOWN_POSITIONS = {
-  home:         { x: 40,  y: 200 },
-  product:      { x: 220, y: 200 },
-  cart:         { x: 400, y: 200 },
-  checkout:     { x: 580, y: 200 },
-  confirmation: { x: 760, y: 200 },
+const KNOWN_ORDER = [
+  "home",
+  "product",
+  "cart",
+  "checkout",
+  "confirmation",
+];
+
+const H_GAP = 190;
+const V_GAP = 130;
+
+function assignColumns(nodes) {
+  const result = {};
+  const unknown = [];
+
+  for (const node of nodes) {
+    const index = KNOWN_ORDER.indexOf(node.id);
+
+    if (index >= 0) {
+      result[node.id] = {
+        col: index,
+        row: 0,
+      };
+    } else {
+      unknown.push(node.id);
+    }
+  }
+
+  const base = KNOWN_ORDER.length;
+
+  unknown.forEach((id, index) => {
+    result[id] = {
+      col: base + Math.floor(index / 2),
+      row: index % 2,
+    };
+  });
+
+  return result;
+}
+
+function buildPositions(nodes) {
+  const layout = assignColumns(nodes);
+
+  return Object.fromEntries(
+    Object.entries(layout).map(([id, value]) => [
+      id,
+      {
+        x: value.col * H_GAP,
+        y: value.row * V_GAP,
+      },
+    ])
+  );
+}
+
+function getNodeWidth(count) {
+  if (count >= 30) return 150;
+  if (count >= 10) return 135;
+  return 120;
+}
+
+function getEdgeWidth(count) {
+  if (count >= 10) return 3.5;
+  if (count >= 5) return 2.5;
+  return 1.8;
+}
+
+function getTheme() {
+  const dark = document.documentElement.dataset.theme === "dark";
+
+  return {
+    dark,
+    nodeBackground: dark ? "#303844" : "#ffffff",
+    nodeBorder: dark ? "#6ea8ff" : "#3578d4",
+    nodeText: dark ? "#f2f6fb" : "#17202a",
+    nodeMuted: dark ? "#aab5c2" : "#66717f",
+    edge: dark ? "#78aeff" : "#3578d4",
+    edgeLabelBackground: dark ? "#20262d" : "#ffffff",
+    edgeLabelText: dark ? "#e8edf3" : "#17202a",
+    graphBackground: dark ? "#20262d" : "#ffffff",
+    positive: dark ? "#4ec77b" : "#2e9c57",
+    negative: dark ? "#ff7078" : "#d94a53",
+  };
+}
+
+function BehavioralNode({ data }) {
+  return (
+    <div
+      style={{
+        position: "relative",
+        minWidth: data.width,
+        minHeight: 54,
+        padding: "8px 12px",
+        borderRadius: 12,
+        border: `1.5px solid ${data.border}`,
+        background: data.background,
+        color: data.color,
+        boxShadow: data.selected
+          ? `0 0 0 3px ${data.border}33, 0 7px 20px rgba(0,0,0,.15)`
+          : "0 4px 14px rgba(0,0,0,.08)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 3,
+        transition:
+          "background .2s ease, border-color .2s ease, box-shadow .2s ease",
+      }}
+    >
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{
+          width: 7,
+          height: 7,
+          background: data.border,
+          border: "2px solid transparent",
+        }}
+      />
+
+      <div
+        style={{
+          fontSize: 13,
+          fontWeight: 800,
+          lineHeight: 1.1,
+          letterSpacing: "-0.01em",
+        }}
+      >
+        {data.label}
+      </div>
+
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 600,
+          color: data.muted,
+        }}
+      >
+        {data.count} visits
+      </div>
+
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{
+          width: 7,
+          height: 7,
+          background: data.border,
+          border: "2px solid transparent",
+        }}
+      />
+    </div>
+  );
+}
+
+const nodeTypes = {
+  behavioral: BehavioralNode,
 };
 
-function getPosition(id, unknownIndex) {
-  return KNOWN_POSITIONS[id] ?? { x: 40 + unknownIndex * 180, y: 380 };
-}
+function GraphViewInner({
+  graph,
+  whatIfProbabilities = null,
+}) {
+  const { fitView } = useReactFlow();
 
-/** Map visit_count to a node width for visual sizing. */
-function nodeWidth(count) {
-  if (!count || count === 0) return 100;
-  if (count < 10) return 100;
-  if (count < 30) return 120;
-  return 140;
-}
+  const theme = useMemo(() => getTheme(), [graph, whatIfProbabilities]);
 
-/** Map transition count to edge stroke width. */
-function edgeStroke(count) {
-  if (!count || count <= 1) return 1.5;
-  if (count < 10) return 2.5;
-  return 4;
-}
+  const positions = useMemo(
+    () => (graph ? buildPositions(graph.nodes) : {}),
+    [graph]
+  );
 
-/**
- * GraphView — behavioral transition graph.
- *
- * Props:
- *   graph: { nodes: [{id, visit_count}], edges: [{from, to, probability, count}] } | null
- */
-export default function GraphView({ graph }) {
+  useEffect(() => {
+    if (!graph || graph.nodes.length === 0) return;
+
+    const timer = setTimeout(() => {
+      fitView({
+        padding: 0.24,
+        duration: 350,
+      });
+    }, 60);
+
+    return () => clearTimeout(timer);
+  }, [graph, whatIfProbabilities, fitView]);
+
+  const handleFit = useCallback(() => {
+    fitView({
+      padding: 0.24,
+      duration: 350,
+    });
+  }, [fitView]);
+
   if (!graph) {
     return (
       <div className="empty-state">
@@ -54,76 +212,190 @@ export default function GraphView({ graph }) {
     );
   }
 
-  if (graph.nodes.length === 0) {
+  if (!graph.nodes?.length) {
     return (
       <div className="empty-state">
         <span className="empty-state-icon">🔍</span>
         <strong>No behavioral data yet</strong>
-        <span>Generate events in the sample app, then refresh.</span>
+        <span>
+          Generate events in the sample app, then refresh.
+        </span>
       </div>
     );
   }
 
-  // Track unknown pages to position them in a grid row below
-  let unknownIdx = 0;
-  const knownIds = new Set(Object.keys(KNOWN_POSITIONS));
+  const rfNodes = graph.nodes.map((node) => {
+    const position = positions[node.id] ?? { x: 0, y: 0 };
 
-  const rfNodes = graph.nodes.map((n) => {
-    const isUnknown = !knownIds.has(n.id);
-    const pos = getPosition(n.id, isUnknown ? unknownIdx++ : 0);
-    const w = nodeWidth(n.visit_count);
     return {
-      id: n.id,
-      position: pos,
-      data: { label: n.id, count: n.visit_count },
+      id: node.id,
+      type: "behavioral",
+      position,
+
+      data: {
+        label: node.id,
+        count: node.visit_count ?? 0,
+        width: getNodeWidth(node.visit_count ?? 0),
+        background: theme.nodeBackground,
+        border: theme.nodeBorder,
+        color: theme.nodeText,
+        muted: theme.nodeMuted,
+      },
+
+      draggable: true,
+      selectable: true,
+    };
+  });
+
+  const rfEdges = graph.edges.map((edge) => {
+    const baselineProbability = Number(edge.probability ?? 0);
+
+    const modifiedProbability =
+      whatIfProbabilities?.[edge.from]?.[edge.to] ??
+      baselineProbability;
+
+    const delta = modifiedProbability - baselineProbability;
+    const changed = Math.abs(delta) > 0.0005;
+
+    const stroke =
+      !changed
+        ? theme.edge
+        : delta > 0
+        ? theme.positive
+        : theme.negative;
+
+    return {
+      id: `${edge.from}-${edge.to}`,
+
+      source: edge.from,
+      target: edge.to,
+
+      type: "default",
+
+      label: `${(modifiedProbability * 100).toFixed(0)}%`,
+
+      animated: changed,
+
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        color: stroke,
+      },
+
+      labelStyle: {
+        fontSize: 11,
+        fontWeight: 800,
+        fill: theme.edgeLabelText,
+      },
+
+      labelBgStyle: {
+        fill: theme.edgeLabelBackground,
+        fillOpacity: 0.96,
+        stroke: theme.dark ? "#3a444f" : "#d7dee7",
+        strokeWidth: 1,
+      },
+
       style: {
-        width: w,
-        background: "#fff",
-        border: "1.5px solid #3b82d4",
-        borderRadius: 8,
-        fontSize: 12,
-        fontWeight: 700,
-        textAlign: "center",
-        padding: "6px 4px",
+        stroke,
+        strokeWidth:
+          changed
+            ? Math.max(getEdgeWidth(edge.count), 3)
+            : getEdgeWidth(edge.count),
+        strokeDasharray: changed ? "7 5" : undefined,
       },
     };
   });
 
-  const rfEdges = graph.edges.map((e) => ({
-    id: `${e.from}-${e.to}`,
-    source: e.from,
-    target: e.to,
-    label: `${(e.probability * 100).toFixed(0)}%`,
-    labelStyle: { fontSize: 10, fill: "#57606a", fontWeight: 600 },
-    labelBgStyle: { fill: "#f6f8fa", fillOpacity: 0.9 },
-    animated: true,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "#3b82d4" },
-    style: {
-      strokeWidth: edgeStroke(e.count),
-      stroke: "#3b82d4",
-    },
-  }));
-
   return (
-    <div className="graph-wrap">
+    <div
+      className="graph-wrap"
+      style={{
+        position: "relative",
+        background: theme.graphBackground,
+      }}
+    >
+      <button
+        type="button"
+        className="graph-fit-button"
+        onClick={handleFit}
+        title="Fit graph to view"
+      >
+        ⊡ Fit
+      </button>
+
+      {whatIfProbabilities && (
+        <div
+          className="graph-scenario-badge"
+          style={{
+            position: "absolute",
+            top: 10,
+            left: 10,
+            zIndex: 10,
+            padding: "4px 8px",
+            borderRadius: 999,
+            border: `1px solid ${theme.positive}`,
+            background: theme.dark ? "#25352d" : "#f0fff5",
+            color: theme.positive,
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: ".05em",
+          }}
+        >
+          WHAT-IF ACTIVE
+        </div>
+      )}
+
+      {!whatIfProbabilities && (
+        <div
+          className="graph-scenario-badge"
+          style={{
+            position: "absolute",
+            top: 10,
+            left: 10,
+            zIndex: 10,
+            padding: "4px 8px",
+            borderRadius: 999,
+            border: `1px solid ${theme.nodeMuted}55`,
+            background: theme.dark ? "#293039" : "#f8fafc",
+            color: theme.nodeMuted,
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: ".05em",
+          }}
+        >
+          BASELINE
+        </div>
+      )}
+
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
+        nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
-        nodesDraggable={true}
+        fitViewOptions={{
+          padding: 0.24,
+        }}
+        nodesDraggable
         nodesConnectable={false}
-        elementsSelectable={false}
-        proOptions={{ hideAttribution: true }}
+        elementsSelectable
+        proOptions={{
+          hideAttribution: true,
+        }}
       >
-        <Background color="#e5e7eb" gap={20} />
-        <Controls showInteractive={false} />
-        <MiniMap
-          nodeColor="#3b82d4"
-          nodeStrokeWidth={0}
-          style={{ border: "1px solid #d0d7de" }}
+        <Background
+          color={theme.dark ? "#3a444f" : "#dfe5ec"}
+          gap={20}
         />
+
+        <Controls showInteractive={false} />
       </ReactFlow>
     </div>
+  );
+}
+
+export default function GraphView(props) {
+  return (
+    <ReactFlowProvider>
+      <GraphViewInner {...props} />
+    </ReactFlowProvider>
   );
 }
