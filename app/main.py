@@ -36,7 +36,7 @@ app.add_middleware(
     "http://localhost:5173",
     "http://localhost:3000",
     "https://git-gud-uxb8.vercel.app",
-    ],ow_credentials=False,
+    ],allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
