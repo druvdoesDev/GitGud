@@ -7,7 +7,7 @@
  * Change API_BASE to point at a different host/port if needed.
  */
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "https://gitgud-o83j.onrender.com";
 
 async function get(path) {
   const res = await fetch(`${API_BASE}${path}`);
