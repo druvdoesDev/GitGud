@@ -33,10 +33,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",  # Vite dev server (React dashboard)
-        "http://localhost:3000",  # Sample e-commerce app
-    ],
-    allow_credentials=False,
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://git-gud-uxb8.vercel.app",
+    ],ow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
